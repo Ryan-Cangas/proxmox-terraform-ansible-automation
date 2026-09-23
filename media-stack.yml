@@ -1,0 +1,68 @@
+---
+- name: Deploy Media Stack (Plex, Jellyfin, qBittorrent)
+  hosts: plex
+  become: true
+  tasks:
+    - name: Ensure base packages and Docker prerequisites are installed
+      apt:
+        name:
+          - curl
+          - gnupg
+          - ca-certificates
+          - python3-pip
+          - python3-docker
+          - docker.io
+          - docker-compose-v2
+        state: present
+        update_cache: yes
+
+    - name: Add NVIDIA Container Toolkit GPG key
+      apt_key:
+        url: https://nvidia.github.io/libnvidia-container/gpgkey
+        state: present
+
+    - name: Add NVIDIA Container Toolkit repository
+      apt_repository:
+        repo: "deb https://nvidia.github.io/libnvidia-container/stable/deb/$(ARCH) /"
+        state: present
+
+    - name: Install NVIDIA Container Toolkit
+      apt:
+        name: nvidia-container-toolkit
+        state: present
+        update_cache: yes
+
+    - name: Configure Docker daemon for NVIDIA runtime
+      command: nvidia-ctk runtime configure --runtime=docker
+      register: nvidia_config
+      changed_when: "'modified' in nvidia_config.stdout"
+
+    - name: Ensure Docker service is running and restarted with NVIDIA runtime
+      service:
+        name: docker
+        state: restarted
+        enabled: yes
+
+    - name: Create local config and media directory structures
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - /opt/media-stack
+        - /opt/media-stack/config
+        - /opt/media-stack/qbittorrent_config
+        - /opt/media-stack/jellyfin_config
+        - /media/Movies
+        - /media/TV-Shows
+
+    - name: Deploy docker-compose.yml to target
+      copy:
+        src: files/docker-compose.yml
+        dest: /opt/media-stack/docker-compose.yml
+        mode: '0644'
+
+    - name: Pull and launch media stack containers
+      community.docker.docker_compose_v2:
+        project_src: /opt/media-stack
+        state: present

@@ -1,0 +1,60 @@
+services:
+  plex:
+    image: lscr.io/linuxserver/plex:latest
+    container_name: plex
+    network_mode: host
+    runtime: nvidia
+    security_opt:
+      - apparmor:unconfined
+    environment:
+      - PUID=0
+      - PGID=0
+      - TZ=Asia/Dubai
+      - VERSION=docker
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,video,utility
+    volumes:
+      - ./config:/config
+      - /media/Movies:/movies
+      - /media/TV-Shows:/tv
+    restart: unless-stopped
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    security_opt:
+      - apparmor:unconfined
+    environment:
+      - PUID=0
+      - PGID=0
+      - TZ=Asia/Dubai
+      - WEBUI_PORT=8080
+      - TORRENTING_PORT=6881
+    volumes:
+      - ./qbittorrent_config:/config
+      - /media:/media
+    ports:
+      - 8080:8080
+      - 6881:6881
+      - 6881:6881/udp
+    restart: unless-stopped
+
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:latest
+    container_name: jellyfin
+    runtime: nvidia
+    security_opt:
+      - apparmor:unconfined
+    environment:
+      - PUID=0
+      - PGID=0
+      - TZ=Asia/Dubai
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+    volumes:
+      - ./jellyfin_config:/config
+      - /media/Movies:/data/movies:ro
+      - /media/TV-Shows:/data/tvshows:ro
+    ports:
+      - 8096:8096
+    restart: unless-stopped
