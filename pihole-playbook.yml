@@ -1,0 +1,50 @@
+---
+- name: Configure and Deploy Pi-hole
+  hosts: pihole
+  become: true
+  tasks:
+    - name: Ensure Docker and dependencies are installed
+      apt:
+        name:
+          - curl
+          - ca-certificates
+          - docker.io
+          - docker-compose-v2
+        state: present
+        update_cache: yes
+
+    - name: Ensure Docker service is running and enabled
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Disable systemd-resolved DNS stub listener (frees port 53)
+      lineinfile:
+        path: /etc/systemd/resolved.conf
+        regexp: '^#?DNSStubListener='
+        line: 'DNSStubListener=no'
+      notify: Restart systemd-resolved
+
+    - name: Create directory for Pi-hole
+      file:
+        path: /opt/pihole
+        state: directory
+        mode: '0755'
+
+    - name: Deploy Pi-hole docker-compose.yml
+      copy:
+        src: files/pihole-compose.yml
+        dest: /opt/pihole/docker-compose.yml
+        mode: '0644'
+
+    - name: Start Pi-hole stack
+      community.docker.docker_compose_v2:
+        project_src: /opt/pihole
+        state: present
+
+  handlers:
+    - name: Restart systemd-resolved
+      service:
+        name: systemd-resolved
+        state: restarted
