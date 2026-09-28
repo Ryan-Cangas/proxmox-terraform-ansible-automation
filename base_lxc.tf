@@ -1,4 +1,4 @@
-resource "proxmox_virtual_environment_container" "template_LXC" {
+resource "proxmox_virtual_environment_container" "base_LXC" {
   description = "Managed by Terraform"
   node_name   = "pve-server"
   unprivileged = true
@@ -23,7 +23,7 @@ resource "proxmox_virtual_environment_container" "template_LXC" {
   }
 
   initialization {
-    hostname = "template-LXC"
+    hostname = "base-LXC"
 
     dns {
       servers = ["1.1.1.1"]
@@ -56,5 +56,5 @@ resource "proxmox_virtual_environment_container" "template_LXC" {
 
 output "assigned_vm_id" {
   description = "Dynamic Proxmox ID Assigned"
-  value = proxmox_virtual_environment_container.template_LXC.vm_id
+  value = proxmox_virtual_environment_container.base_LXC.vm_id
 }
