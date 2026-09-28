@@ -1,6 +1,7 @@
 resource "proxmox_virtual_environment_container" "template_LXC" {
-  description = "Managed by Terraform - Media Stack (Plex, Jellyfin, qBittorrent)"
+  description = "Managed by Terraform"
   node_name   = "pve-server"
+  unprivileged = true
 
   operating_system {
     template_file_id = "local:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
@@ -42,7 +43,6 @@ resource "proxmox_virtual_environment_container" "template_LXC" {
 
   features {
     nesting = true
-    keyctl = true
   }
 
   started = true
