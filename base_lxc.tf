@@ -24,9 +24,15 @@ resource "proxmox_virtual_environment_container" "template_LXC" {
 
   initialization {
     hostname = "template-LXC"
+
+    dns {
+      servers = ["1.1.1.1"]
+    }
+
     ip_config {
       ipv4 {
         address = "dhcp"
+        gateway = "192.168.1.1"
       }
     }
     user_account {
