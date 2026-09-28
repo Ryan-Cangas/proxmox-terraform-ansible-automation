@@ -11,3 +11,6 @@ crash.*.log
 
 # Ansible retry files
 *.retry
+
+# Private notes
+dev-notes.txt
