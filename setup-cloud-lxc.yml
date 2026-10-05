@@ -1,0 +1,102 @@
+---
+- name: Provision Proxmox LXC for Multi-Cloud Emulation Lab
+  hosts: cloud_lxc
+  become: true
+  gather_facts: true
+
+  vars:
+    project_dir: "/opt/multicloud-broker"
+    venv_path: "/opt/cloud-venv"
+    app_user: "root"
+
+  tasks:
+    - name: Update apt cache and upgrade system packages
+      ansible.builtin.apt:
+        update_cache: true
+        upgrade: dist
+        autoremove: true
+        clean: true
+
+    - name: Install core system dependencies
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+          - software-properties-common
+          - python3
+          - python3-pip
+          - python3-venv
+          - git
+          - jq
+          - keyutils
+        state: present
+
+    - name: Create directory for apt keyrings
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+    - name: Download official Docker GPG armored key
+      ansible.builtin.get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /etc/apt/keyrings/docker.asc
+        mode: "0644"
+        force: false
+
+    - name: Configure official Docker repository
+      ansible.builtin.apt_repository:
+        repo: >-
+          deb [arch={{ 'amd64' if ansible_architecture == 'x86_64' else 'arm64' }}
+          signed-by=/etc/apt/keyrings/docker.asc]
+          https://download.docker.com/linux/ubuntu
+          {{ ansible_distribution_release }} stable
+        state: present
+        filename: docker
+
+    - name: Install Docker CE, CLI, and Compose plugin
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+        update_cache: true
+
+    - name: Ensure Docker daemon is started and enabled
+      ansible.builtin.systemd:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Create Python virtual environment for Cloud SDKs
+      ansible.builtin.command:
+        cmd: "python3 -m venv {{ venv_path }}"
+        creates: "{{ venv_path }}/bin/activate"
+
+    - name: Install Cloud SDK dependencies inside the venv
+      ansible.builtin.pip:
+        virtualenv: "{{ venv_path }}"
+        name:
+          - azure-storage-blob
+          - azure-storage-queue
+          - google-cloud-pubsub
+          - boto3
+        state: present
+
+    - name: Create scaffolding project directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: "0755"
+      loop:
+        - "{{ project_dir }}"
+        - "{{ project_dir }}/azure"
+        - "{{ project_dir }}/gcp"
+        - "{{ project_dir }}/aws"
